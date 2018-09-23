@@ -11,4 +11,25 @@ void main(void)
 	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
 
 	register_init();
+
+    //Go to low power mode with interrupts.
+    while(1)
+    {
+        PCM_gotoLPM0();
+    }
+}
+
+
+/* 10msec timer callback from interrupt. */
+void timer_10msec_callback(void)
+{
+    static U8 led_state;
+    static U8 counter = 0;
+
+    if (++counter > 100u)
+    {
+        led_state = !led_state;
+        set_led_two_blue(led_state);
+        counter = 0u;
+    }
 }
