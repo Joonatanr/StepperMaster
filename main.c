@@ -2,6 +2,7 @@
 #include "typedefs.h"
 #include "driverlib.h"
 #include "register.h"
+#include "spidrv.h"
 
 /**
  * main.c
@@ -11,6 +12,8 @@ void main(void)
 	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
 
 	register_init();
+
+	spidrv_init();
 
     //Go to low power mode with interrupts.
     while(1)
