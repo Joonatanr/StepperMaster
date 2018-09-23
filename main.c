@@ -27,12 +27,19 @@ void main(void)
 void timer_10msec_callback(void)
 {
     static U8 led_state;
-    static U8 counter = 0;
+    static U8 counter = 0u;
+    static U8 spi_timer = 0u;
 
-    if (++counter > 100u)
+    if (++counter >= 100u)
     {
         led_state = !led_state;
         set_led_two_blue(led_state);
         counter = 0u;
+    }
+
+    if (++spi_timer >= 5u)
+    {
+        spi_timer = 0u;
+        spidrv_cyclic50ms();
     }
 }
