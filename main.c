@@ -3,17 +3,30 @@
 #include "driverlib.h"
 #include "register.h"
 #include "spidrv.h"
+#include "uartmgr.h"
 
 /**
  * main.c
  */
+
+Boolean UartCommandCallback(char *buf, U16 msg_len);
+UartCommandHandler CmdHandlerFunc = UartCommandCallback; /* Connect callback to UART manager. */
+
+Boolean priv_isInitComplete = FALSE;
+
 void main(void)
 {
 	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
 
 	register_init();
 
+	uartmgr_init();
+
 	spidrv_init();
+
+	uartmgr_send_str("Stepper Master simulator ver 1.0 - Ready");
+
+	priv_isInitComplete = TRUE;
 
     //Go to low power mode with interrupts.
     while(1)
@@ -30,6 +43,14 @@ void timer_10msec_callback(void)
     static U8 counter = 0u;
     static U8 spi_timer = 0u;
 
+    /* TODO : Should not call cylic functions directly from the interrupt.
+     * This is probably OK for testing, but should consider switching to a flag based system... */
+
+    if (!priv_isInitComplete)
+    {
+        return;
+    }
+
     if (++counter >= 100u)
     {
         led_state = !led_state;
@@ -42,4 +63,15 @@ void timer_10msec_callback(void)
         spi_timer = 0u;
         spidrv_cyclic50ms();
     }
+
+    /* Check the uart manager cyclically. */
+    uartmgr_cyclic();
+}
+
+
+/* Placeholder. */
+Boolean UartCommandCallback(char *buf, U16 msg_len)
+{
+    /* We end up here when receiving a line over the UART. */
+    return TRUE;
 }
