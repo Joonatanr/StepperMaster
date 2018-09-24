@@ -24,15 +24,17 @@ void main(void)
 
 	spidrv_init();
 
-	uartmgr_send_str("Stepper Master simulator ver 1.0 - Ready");
+	Interrupt_enableMaster();
 
 	priv_isInitComplete = TRUE;
 
-    //Go to low power mode with interrupts.
-    while(1)
-    {
-        PCM_gotoLPM0();
-    }
+	uartmgr_send_str("Stepper Master simulator ver 1.0 - Ready");
+
+	while(1)
+	{
+	    /* Check the uart manager cyclically. */
+	    uartmgr_cyclic();
+	}
 }
 
 
@@ -63,9 +65,6 @@ void timer_10msec_callback(void)
         spi_timer = 0u;
         spidrv_cyclic50ms();
     }
-
-    /* Check the uart manager cyclically. */
-    uartmgr_cyclic();
 }
 
 

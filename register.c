@@ -61,10 +61,10 @@ Public void register_init(void)
     timerA_init();
 
     //Not quite sure what this does yet.
-    MAP_Interrupt_enableSleepOnIsrExit();
+    //MAP_Interrupt_enableSleepOnIsrExit();
 
     //Enable interrupts in general.
-    Interrupt_enableMaster();
+    //Interrupt_enableMaster();
 }
 
 
