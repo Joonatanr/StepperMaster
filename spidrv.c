@@ -47,11 +47,12 @@ Private void handleSpiComplete(void);
 Private void startSpiCommunication(void);
 
 /* Private variable definitions */
-Private U8 priv_tx_data[MAP_SPI_MSG_LENGTH] = "Hello This is Master!";
+Private U8 priv_tx_data[MAP_SPI_MSG_LENGTH] = " Hello This is Master! ";
 Private U8 priv_rx_data[MAP_SPI_MSG_LENGTH] = { 0 };
 
 volatile U8 priv_isr_flag = 0u;
 
+Private U8 priv_counter = 0;
 
 /* Configure this as master DMA. */
 Public void spidrv_init(void)
@@ -104,6 +105,10 @@ Public void spidrv_cyclic50ms(void)
 
 Private void startSpiCommunication(void)
 {
+    /* Set up the message so we can send slightly different data each time.*/
+    priv_tx_data[0] = priv_counter;
+    priv_tx_data[22] = priv_counter;
+
     /* Setup the TX transfer characteristics & buffers */
         MAP_DMA_setChannelControl(DMA_CH0_EUSCIB0TX0 | UDMA_PRI_SELECT,
         UDMA_SIZE_8 | UDMA_SRC_INC_8 | UDMA_DST_INC_NONE | UDMA_ARB_1);
@@ -138,6 +143,10 @@ Private void startSpiCommunication(void)
 
         /* Start Tx */
         MAP_DMA_enableChannel(0);
+
+
+        /* This is dor debugging... */
+        priv_counter++;
 }
 
 
