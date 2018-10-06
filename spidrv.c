@@ -19,7 +19,7 @@
 /* SPI Configuration Parameter */
 const eUSCI_SPI_MasterConfig spiMasterConfig =
 {
-     EUSCI_B_SPI_CLOCKSOURCE_SMCLK, 12000000, 10000, /* Currently desired SPI clock is 10 kHz */ /* TODO : Change this to higher rate once testing is done. */
+     EUSCI_B_SPI_CLOCKSOURCE_SMCLK, 12000000, 1000000, /* SPI clock is set to 1 MHz */
      EUSCI_B_SPI_MSB_FIRST,
      EUSCI_B_SPI_PHASE_DATA_CAPTURED_ONFIRST_CHANGED_ON_NEXT,
      EUSCI_B_SPI_CLOCKPOLARITY_INACTIVITY_HIGH, EUSCI_B_SPI_3PIN
@@ -52,7 +52,7 @@ Private U8 priv_rx_data[MAP_SPI_MSG_LENGTH] = { 0 };
 
 volatile U8 priv_isr_flag = 0u;
 
-Private U8 priv_counter = 0;
+Private U8 priv_counter = '0';
 
 /* Configure this as master DMA. */
 Public void spidrv_init(void)
@@ -145,8 +145,12 @@ Private void startSpiCommunication(void)
         MAP_DMA_enableChannel(0);
 
 
-        /* This is dor debugging... */
-        priv_counter++;
+        /* This is for debugging... */
+        if (++priv_counter > '9')
+        {
+            priv_counter = '0';
+        }
+
 }
 
 
