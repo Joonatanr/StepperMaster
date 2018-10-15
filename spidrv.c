@@ -11,8 +11,8 @@
 
 /*
  * P1.5 - CLK
- * P1.6 - MISO
- * P1.7 - MOSI
+ * P1.6 - MOSI
+ * P1.7 - MISO
  */
 
 
