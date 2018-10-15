@@ -8,6 +8,7 @@
 
 #include "spidrv.h"
 #include "driverlib.h"
+#include "uartmgr.h"
 
 /*
  * P1.5 - CLK
@@ -53,6 +54,8 @@ Private U8 priv_rx_data[MAP_SPI_MSG_LENGTH] = { 0 };
 volatile U8 priv_isr_flag = 0u;
 
 Private U8 priv_counter = '0';
+Private char priv_debug_str[64] = { 0 };
+
 
 /* Configure this as master DMA. */
 Public void spidrv_init(void)
@@ -156,7 +159,19 @@ Private void startSpiCommunication(void)
 
 Private void handleSpiComplete(void)
 {
+    U8 len;
     /* TODO : Process received data. */
+    strcpy(priv_debug_str, "SLAVE:");
+    len = 6u;
+    priv_debug_str[len++] = '<';
+    memcpy(priv_debug_str + len, priv_rx_data, MAP_SPI_MSG_LENGTH);
+    len += MAP_SPI_MSG_LENGTH;
+
+    priv_debug_str[len++] = '>';
+    priv_debug_str[len++] = '\n';
+    priv_debug_str[len++] = 0;
+
+    uartmgr_send_str_async(priv_debug_str, len);
 
     /* TODO : Is this necessary? */
     /* Enabling Interrupts again...*/
