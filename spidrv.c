@@ -46,6 +46,7 @@ static DMA_ControlTable MSP_EXP432P401RLP_DMAControlTable[32];
 
 Private void handleSpiComplete(void);
 Private void startSpiCommunication(void);
+Private void setCSPin(Boolean mode);
 
 /* Private variable definitions */
 Private U8 priv_tx_data[MAP_SPI_MSG_LENGTH] = " Hello This is Master! ";
@@ -66,6 +67,7 @@ Public void spidrv_init(void)
 
     /* Configure CS pin as output. */
     /* TODO */
+    GPIO_setAsOutputPin(GPIO_PORT_P5, GPIO_PIN7);
 
     /* Configuring SPI master module */
     MAP_SPI_initMaster(EUSCI_B0_BASE, &spiMasterConfig);
@@ -111,6 +113,15 @@ Private void startSpiCommunication(void)
     /* Set up the message so we can send slightly different data each time.*/
     priv_tx_data[0] = priv_counter;
     priv_tx_data[22] = priv_counter;
+
+    setCSPin(TRUE);
+
+    //Small delay for slave to start up transfer.
+    MAP_DMA_disableChannel(1);
+
+    /* Start Tx */
+    MAP_DMA_disableChannel(0);
+    __delay_cycles(4000);
 
     /* Setup the TX transfer characteristics & buffers */
     MAP_DMA_setChannelControl( DMA_CH0_EUSCIB0TX0 | UDMA_PRI_SELECT,
@@ -160,7 +171,9 @@ Private void startSpiCommunication(void)
 Private void handleSpiComplete(void)
 {
     U8 len;
-    /* TODO : Process received data. */
+
+    setCSPin(FALSE);
+
     strcpy(priv_debug_str, "SLAVE:");
     len = 6u;
     priv_debug_str[len++] = '<';
@@ -177,6 +190,20 @@ Private void handleSpiComplete(void)
     /* Enabling Interrupts again...*/
     MAP_Interrupt_enableInterrupt(INT_DMA_INT1);
     MAP_DMA_enableInterrupt(INT_DMA_INT1);
+}
+
+
+/* Drive chip select pin low or high. */
+Private void setCSPin(Boolean mode)
+{
+    if(mode)
+    {
+        GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN7);
+    }
+    else
+    {
+        GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN7);
+    }
 }
 
 
