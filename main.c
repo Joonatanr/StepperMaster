@@ -4,6 +4,7 @@
 #include "register.h"
 #include "spidrv.h"
 #include "uartmgr.h"
+#include "spiCommandHandler.h"
 
 /**
  * main.c
@@ -23,6 +24,8 @@ void main(void)
 	uartmgr_init();
 
 	spidrv_init();
+
+	spiCommandHandler_init();
 
 	Interrupt_enableMaster();
 

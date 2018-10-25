@@ -9,6 +9,7 @@
 #include "spidrv.h"
 #include "driverlib.h"
 #include "uartmgr.h"
+#include "SpiCommandHandler.h"
 
 /*
  * P1.5 - CLK
@@ -39,7 +40,7 @@ __align(1024)
 #endif
 static DMA_ControlTable MSP_EXP432P401RLP_DMAControlTable[32];
 
-#define MAP_SPI_MSG_LENGTH    32
+#define MAP_SPI_MSG_LENGTH    SPI_COMMAND_LENGTH
 
 
 /* Private function forward declarations */
@@ -49,13 +50,10 @@ Private void startSpiCommunication(void);
 Private void setCSPin(Boolean mode);
 
 /* Private variable definitions */
-Private U8 priv_tx_data[MAP_SPI_MSG_LENGTH] = " Hello This is Master! ";
+Private U8 priv_tx_data[MAP_SPI_MSG_LENGTH] = { 0 };
 Private U8 priv_rx_data[MAP_SPI_MSG_LENGTH] = { 0 };
 
 volatile U8 priv_isr_flag = 0u;
-
-Private U8 priv_counter = '0';
-Private char priv_debug_str[64] = { 0 };
 
 
 /* Configure this as master DMA. */
@@ -110,9 +108,8 @@ Public void spidrv_cyclic50ms(void)
 
 Private void startSpiCommunication(void)
 {
-    /* Set up the message so we can send slightly different data each time.*/
-    priv_tx_data[0] = priv_counter;
-    priv_tx_data[22] = priv_counter;
+    /* Retrieve command from the command handler. */
+    spiCommandHandler_PrepareCommand(priv_tx_data);
 
     setCSPin(TRUE);
 
@@ -159,32 +156,13 @@ Private void startSpiCommunication(void)
 
     /* Start Tx */
     MAP_DMA_enableChannel(0);
-
-    /* This is for debugging... */
-    if (++priv_counter > '9')
-    {
-        priv_counter = '0';
-    }
 }
 
 
 Private void handleSpiComplete(void)
 {
-    U8 len;
-
     setCSPin(FALSE);
-
-    strcpy(priv_debug_str, "SLAVE:");
-    len = 6u;
-    priv_debug_str[len++] = '<';
-    memcpy(priv_debug_str + len, priv_rx_data, MAP_SPI_MSG_LENGTH);
-    len += MAP_SPI_MSG_LENGTH;
-
-    priv_debug_str[len++] = '>';
-    priv_debug_str[len++] = '\n';
-    priv_debug_str[len++] = 0;
-
-    uartmgr_send_str_async(priv_debug_str, len);
+    /* TODO : Process response. */
 
     /* TODO : Is this necessary? */
     /* Enabling Interrupts again...*/
