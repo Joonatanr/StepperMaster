@@ -16,6 +16,16 @@
 
 #define CMD_PACKET_BEGIN 0xFFFEu
 
+typedef enum
+{
+    SPI_COMMAND_IDLE,       //  Module is disabled. Not sure if we need this.
+    SPI_COMMAND_PENDING,    //  Getting ready to send out a command.
+    SPI_RESPONSE_PENDING,   //  Waiting for response.
+    SPI_RESPONSE_RECEIVED,  //  Response received, getting ready to process this.
+    SPI_NUMBER_OF_STATES
+} SpiCommand_State;
+
+
 typedef struct
 {
     U16 header;
@@ -26,6 +36,9 @@ typedef struct
     U8  data[CMD_DATA_LEN];
 
 } SpiCommandData;
+
+#define CRITICAL_SECTION_BEGIN()    Interrupt_disableMaster()
+#define CRITICAL_SECTION_END()      Interrupt_enableMaster()
 
 
 #define INITIAL_CRC_16     0xFFFFu
@@ -69,59 +82,91 @@ Private const U16 priv_crcTable_16[256] = {
 };
 
 Private SpiCommandData priv_command;
+Private SpiCommand_State priv_state = SPI_COMMAND_IDLE;
+Private U8 * priv_response_ptr = NULL;
 
 /**************************************** Private function forward declarations *************************************************/
 
-Public U16 calculate_crc16( U16 crc, const U8* data, U32 len);
+Private Boolean processResponse(void);
+Private void handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 data_len);
+Private U16 calculate_crc16( U16 crc, const U8* data, U32 len);
+Private Boolean setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len);
 
 
 /**************************************** Public function definitions *************************************************/
 
 Public void spiCommandHandler_init(void)
 {
-    /* Set up priv_command structure for testing. */
-    spiCommandHandler_setCommand(0x01u, 0x00u, NULL , 0u);
-
+    priv_state = SPI_COMMAND_PENDING;
 }
 
 
 Public void spiCommandHandler_cyclic10ms(void)
 {
-
+    switch(priv_state)
+    {
+        case SPI_COMMAND_IDLE:
+        case SPI_COMMAND_PENDING:
+        case SPI_RESPONSE_PENDING:
+            /* Nothing to do here... */
+            break;
+        case SPI_RESPONSE_RECEIVED:
+            if (processResponse() == FALSE)
+            {
+                /* TODO : Handle error somehow, maybe blink red LED? */
+            }
+            priv_state = SPI_COMMAND_PENDING;
+            break;
+        default:
+            break;
+    }
 }
 
 
-Public Boolean spiCommandHandler_setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len)
+/* TODO : Might want to add a response callback to this. */
+Public Boolean spiCommandHandler_setNextCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len)
 {
-    if (data_len > CMD_DATA_LEN)
+    Boolean res;
+
+    if (priv_state == SPI_COMMAND_IDLE)
     {
         return FALSE;
     }
 
-    /* CRITICAL SECTION BEGIN */
-    Interrupt_disableMaster();
-    priv_command.header = CMD_PACKET_BEGIN;
-    priv_command.data_len = data_len;
-    priv_command.cmd_id = cmd_id;
-    priv_command.sub_id = sub;
-    if(data_len > 0u)
+    CRITICAL_SECTION_BEGIN();
+    if (priv_command.cmd_id != CMD_REPORT_STATUS)
     {
-        memcpy(priv_command.data, data, data_len);
+        /* We already have a command, other than report status currently pending... */
+        res = FALSE;
     }
-    priv_command.resp_code = 0u;
-    Interrupt_enableMaster();
-    /* CRITICAL SECTION END */
+    else
+    {
+        res = setCommand(cmd_id, sub, data, data_len);
+    }
+    CRITICAL_SECTION_END();
+    return res;
+}
 
-    return TRUE;
+
+Public void spiCommandHandler_ResponseReceived(U8 * data)
+{
+    if (priv_state == SPI_RESPONSE_PENDING)
+    {
+        priv_state = SPI_RESPONSE_RECEIVED;
+        priv_response_ptr = data;
+    }
+    else
+    {
+        /* We got an unexpected response, not sure how to proceed here... This should normally not happen. */
+    }
 }
 
 
 /* Prepares raw command packet.     */
 /* Called cyclically by SPI driver. */
-Public void spiCommandHandler_PrepareCommand(U8 * dest)
+/* Called from interrupt context    */
+Public void spiCommandHandler_prepareCommand(U8 * dest)
 {
-    /* Currently for testing we will always send a query status command. */
-
     /* We will add checksum length to this at the end. */
     U16 packet_len = priv_command.data_len + CMD_METADATA_LEN;
     U16 crc;
@@ -148,12 +193,123 @@ Public void spiCommandHandler_PrepareCommand(U8 * dest)
     /* Add checksum to the end of the packet. */
     dest[packet_len - 2] = (crc >> 8u) & 0xffu;
     dest[packet_len - 1] = crc & 0xffu;
+
+    /* Set up the next command to DEFAULT. (This can be overridden) */
+    setCommand((U8)CMD_REPORT_STATUS, 0x00u, NULL, 0u);
+    priv_state = SPI_RESPONSE_PENDING; /* We are now waiting for a response. */
 }
 
 
 /**************************************** Private function definitions *************************************************/
 
-Public U16 calculate_crc16
+Private Boolean processResponse(void)
+{
+    U8 ix = 0u;
+
+    U8 * data_ptr = NULL;
+    U8 * packet_begin_ptr = NULL;
+
+    U16 packet_len;
+    Boolean res;
+
+    U16 calculated_checksum;
+    U16 sent_checksum;
+
+    U8 cmd_id;
+    U8 sub_id;
+    U8 resp_code;
+
+    /* Begin by looking for the packet beginning. */
+    while (ix < (SPI_COMMAND_LENGTH - 2u))
+    {
+        if ((priv_response_ptr[ix] == (U8)CMD_PACKET_BEGIN >> 8u) && (priv_response_ptr[ix + 1u] == (U8)CMD_PACKET_BEGIN & 0xffu))
+        {
+            packet_begin_ptr = &priv_response_ptr[ix];
+            break;
+        }
+
+        ix++;
+    }
+
+    if (packet_begin_ptr != NULL)
+    {
+        data_ptr = packet_begin_ptr + 2u;
+
+        packet_len = data_ptr[0] << 8u;
+        packet_len |= data_ptr[1];
+
+        data_ptr += 2;
+
+        if ((packet_len < CMD_METADATA_LEN) || (packet_len > SPI_COMMAND_LENGTH))
+        {
+            /* Got malformed response, packet length is out of bounds.  */
+            res = FALSE;
+        }
+        else
+        {
+            /* Lets verify the checksum. */
+            calculated_checksum = calculate_crc16(INITIAL_CRC_16, packet_begin_ptr, packet_len - CMD_CHECKSUM_LEN);
+            sent_checksum = (U16)((U16)packet_begin_ptr[packet_len - 2u] << 8u);
+            sent_checksum |= packet_begin_ptr[packet_len - 1u];
+
+            if (calculated_checksum == sent_checksum)
+            {
+                cmd_id = *data_ptr;
+                data_ptr++;
+                sub_id = *data_ptr;
+                data_ptr++;
+                resp_code = *data_ptr;
+                data_ptr++;
+
+                /* Response is in correct format... */
+                res = TRUE;
+
+                /* Pass response on to handler... */
+                handleResponse(cmd_id, sub_id, resp_code, data_ptr, packet_len - CMD_METADATA_LEN);
+            }
+            else
+            {
+                res = FALSE;
+            }
+        }
+    }
+    else
+    {
+        /* Could not find packet header, response is malformed. */
+        res = FALSE;
+    }
+
+    return res;
+}
+
+
+Private void handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 data_len)
+{
+    /* TODO : Implement this. */
+}
+
+
+Private Boolean setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len)
+{
+    if (data_len > CMD_DATA_LEN)
+    {
+        return FALSE;
+    }
+
+    priv_command.header = CMD_PACKET_BEGIN;
+    priv_command.data_len = data_len;
+    priv_command.cmd_id = cmd_id;
+    priv_command.sub_id = sub;
+    if(data_len > 0u)
+    {
+        memcpy(priv_command.data, data, data_len);
+    }
+    priv_command.resp_code = 0u;
+
+    return TRUE;
+}
+
+Private U16 calculate_crc16
 (
    U16 crc,        /**< [in] Initial checksum value. */
    const U8* data, /**< [in] Pointer to data for calculate checksum for. */

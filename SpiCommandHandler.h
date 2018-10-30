@@ -21,9 +21,10 @@ typedef enum
 } CommandId;
 
 
-extern void spiCommandHandler_PrepareCommand(U8 * dest);
+extern void spiCommandHandler_prepareCommand(U8 * dest);
 extern void spiCommandHandler_init(void);
-extern Boolean spiCommandHandler_setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len);
+extern Boolean spiCommandHandler_setNextCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len);
+extern void spiCommandHandler_ResponseReceived(U8 * data);
 extern void spiCommandHandler_cyclic10ms(void);
 
 #endif /* SPICOMMANDHANDLER_H_ */

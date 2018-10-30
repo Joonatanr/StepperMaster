@@ -109,7 +109,7 @@ Public void spidrv_cyclic50ms(void)
 Private void startSpiCommunication(void)
 {
     /* Retrieve command from the command handler. */
-    spiCommandHandler_PrepareCommand(priv_tx_data);
+    spiCommandHandler_prepareCommand(priv_tx_data);
 
     setCSPin(TRUE);
 
@@ -162,7 +162,7 @@ Private void startSpiCommunication(void)
 Private void handleSpiComplete(void)
 {
     setCSPin(FALSE);
-    /* TODO : Process response. */
+    spiCommandHandler_ResponseReceived(priv_rx_data);
 
     /* TODO : Is this necessary? */
     /* Enabling Interrupts again...*/
