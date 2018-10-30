@@ -68,6 +68,8 @@ void timer_10msec_callback(void)
         spi_timer = 0u;
         spidrv_cyclic50ms();
     }
+
+    spiCommandHandler_cyclic10ms();
 }
 
 

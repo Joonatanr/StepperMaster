@@ -6,6 +6,7 @@
  */
 
 #include "SpiCommandHandler.h"
+#include "driverlib.h"
 
 #define CMD_HEADER_LEN 7u
 #define CMD_CHECKSUM_LEN 2u
@@ -84,6 +85,12 @@ Public void spiCommandHandler_init(void)
 }
 
 
+Public void spiCommandHandler_cyclic10ms(void)
+{
+
+}
+
+
 Public Boolean spiCommandHandler_setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len)
 {
     if (data_len > CMD_DATA_LEN)
@@ -91,6 +98,8 @@ Public Boolean spiCommandHandler_setCommand(U8 cmd_id, U8 sub, U8 * data, U8 dat
         return FALSE;
     }
 
+    /* CRITICAL SECTION BEGIN */
+    Interrupt_disableMaster();
     priv_command.header = CMD_PACKET_BEGIN;
     priv_command.data_len = data_len;
     priv_command.cmd_id = cmd_id;
@@ -100,12 +109,15 @@ Public Boolean spiCommandHandler_setCommand(U8 cmd_id, U8 sub, U8 * data, U8 dat
         memcpy(priv_command.data, data, data_len);
     }
     priv_command.resp_code = 0u;
+    Interrupt_enableMaster();
+    /* CRITICAL SECTION END */
 
     return TRUE;
 }
 
 
-/* Prepares raw command packet. */
+/* Prepares raw command packet.     */
+/* Called cyclically by SPI driver. */
 Public void spiCommandHandler_PrepareCommand(U8 * dest)
 {
     /* Currently for testing we will always send a query status command. */
