@@ -20,6 +20,12 @@ typedef enum
     NUMBER_OF_SPI_COMMANDS
 } CommandId;
 
+typedef enum
+{
+    SPI_RESPONSE_ACK,
+    SPI_RESPONSE_NACK,
+    NUMBER_OF_SPI_RESPONSE_CODES
+} Spi_ResponseCode;
 
 extern void spiCommandHandler_prepareCommand(U8 * dest);
 extern void spiCommandHandler_init(void);
