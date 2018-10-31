@@ -76,55 +76,15 @@ Public void delay_msec(U16 msec)
 }
 
 
-/****************************************************************************************
- * INPUT OUTPUT PORTS
- ****************************************************************************************/
-
-Public void set_led_one(U8 state)
+Public void ports_setPort(U32 port, U32 pin, Boolean value)
 {
-    if (state == 1u)
+    if (value)
     {
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+        GPIO_setOutputHighOnPin(port, pin);
     }
     else
     {
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
-    }
-}
-
-Public void set_led_two_red(U8 state)
-{
-    if (state == 1u)
-    {
-        GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    }
-    else
-    {
-        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    }
-}
-
-Public void set_led_two_green(U8 state)
-{
-    if (state == 1u)
-    {
-        GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    }
-    else
-    {
-        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    }
-}
-
-Public void set_led_two_blue(U8 state)
-{
-    if (state == 1u)
-    {
-        GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
-    }
-    else
-    {
-        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+        GPIO_setOutputLowOnPin(port, pin);
     }
 }
 

@@ -7,6 +7,7 @@
 
 #include "SpiCommandHandler.h"
 #include "driverlib.h"
+#include "led.h"
 
 #define CMD_HEADER_LEN 7u
 #define CMD_CHECKSUM_LEN 2u
@@ -111,9 +112,13 @@ Public void spiCommandHandler_cyclic10ms(void)
             /* Nothing to do here... */
             break;
         case SPI_RESPONSE_RECEIVED:
-            if (processResponse() == FALSE)
+            if (processResponse() == TRUE)
             {
-                /* TODO : Handle error somehow, maybe blink red LED? */
+                led_show_period(LED_TWO_GREEN, 200u);
+            }
+            else
+            {
+                led_show_period(LED_TWO_RED, 200u);
             }
             priv_state = SPI_COMMAND_PENDING;
             break;

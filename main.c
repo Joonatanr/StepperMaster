@@ -5,6 +5,7 @@
 #include "spidrv.h"
 #include "uartmgr.h"
 #include "spiCommandHandler.h"
+#include "led.h"
 
 /**
  * main.c
@@ -25,6 +26,8 @@ void main(void)
 
 	spidrv_init();
 
+	led_init();
+
 	spiCommandHandler_init();
 
 	Interrupt_enableMaster();
@@ -44,12 +47,8 @@ void main(void)
 /* 10msec timer callback from interrupt. */
 void timer_10msec_callback(void)
 {
-    static U8 led_state;
     static U8 counter = 0u;
     static U8 spi_timer = 0u;
-
-    /* TODO : Should not call cylic functions directly from the interrupt.
-     * This is probably OK for testing, but should consider switching to a flag based system... */
 
     if (!priv_isInitComplete)
     {
@@ -58,8 +57,6 @@ void timer_10msec_callback(void)
 
     if (++counter >= 100u)
     {
-        led_state = !led_state;
-        set_led_two_blue(led_state);
         counter = 0u;
     }
 
@@ -67,6 +64,7 @@ void timer_10msec_callback(void)
     {
         spi_timer = 0u;
         spidrv_cyclic50ms();
+        led_cyclic50ms();
     }
 
     spiCommandHandler_cyclic10ms();
