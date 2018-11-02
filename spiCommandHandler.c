@@ -15,7 +15,8 @@
 #define CMD_METADATA_LEN (CMD_HEADER_LEN + CMD_CHECKSUM_LEN)
 #define CMD_DATA_LEN SPI_COMMAND_LENGTH - CMD_METADATA_LEN
 
-#define CMD_PACKET_BEGIN 0xFFFEu
+#define CMD_PACKET_BEGIN_MSB 0xFF
+#define CMD_PACKET_BEGIN_LSB 0xFE
 
 typedef enum
 {
@@ -29,7 +30,6 @@ typedef enum
 
 typedef struct
 {
-    U16 header;
     U16 data_len;
     U8  cmd_id;
     U8  sub_id;
@@ -177,8 +177,8 @@ Public void spiCommandHandler_prepareCommand(U8 * dest)
     U16 crc;
 
     /* Packet header. */
-    dest[0] = (priv_command.header >> 8u) & 0xffu;
-    dest[1] = (priv_command.header & 0xffu);
+    dest[0] = CMD_PACKET_BEGIN_MSB;
+    dest[1] = CMD_PACKET_BEGIN_LSB;
 
     dest[2] = (packet_len >> 8u) & 0xffu;
     dest[3] = (packet_len & 0xffu);
@@ -227,7 +227,7 @@ Private Boolean processResponse(void)
     /* Begin by looking for the packet beginning. */
     while (ix < (SPI_COMMAND_LENGTH - 2u))
     {
-        if ((priv_response_ptr[ix] == (U8)CMD_PACKET_BEGIN >> 8u) && (priv_response_ptr[ix + 1u] == (U8)CMD_PACKET_BEGIN & 0xffu))
+        if ((priv_response_ptr[ix] == CMD_PACKET_BEGIN_MSB) && (priv_response_ptr[ix + 1u] == CMD_PACKET_BEGIN_LSB))
         {
             packet_begin_ptr = &priv_response_ptr[ix];
             break;
@@ -301,7 +301,6 @@ Private Boolean setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len)
         return FALSE;
     }
 
-    priv_command.header = CMD_PACKET_BEGIN;
     priv_command.data_len = data_len;
     priv_command.cmd_id = cmd_id;
     priv_command.sub_id = sub;

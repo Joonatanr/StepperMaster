@@ -94,8 +94,8 @@ Public void spidrv_cyclic50ms(void)
         handleSpiComplete();
     }
 
-    /* Currently we start a new SPI communication every 1 second. */
-    if (++counter > 20u)
+    /* Currently we start a new SPI communication every 500 ms. */
+    if (++counter > 10u)
     {
         counter = 0u;
 
