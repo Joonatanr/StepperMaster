@@ -41,6 +41,7 @@ typedef struct
 /************************************* Private function prototypes ************************************/
 
 Private Boolean handleCommand(char * cmd, U16 msg_len);
+Private void setResponsePending(void);
 
 /* Command handlers */
 Private Boolean HandleCommandToStepper(char * data, U8 len);
@@ -50,7 +51,6 @@ Private Boolean HandleExtendedQueryState(char * data, U8 len);
 /* Subfunction handlers */
 Private Boolean HandleCommandRPMSet(Stepper_Id id, int arg);
 Private Boolean HandleCommandMicroStepSet(Stepper_Id id, int arg);
-
 
 Private Boolean appendResponse(const char * resp);
 
@@ -78,6 +78,8 @@ Private const SubFunc_T priv_subfunctions[] =
 #define MAX_RESPONSE_LENGTH 128u
 #define GENERAL_PURPOSE_STR_LENGTH 64u
 
+#define RESPONSE_TIMEOUT 2000u //Set to 2 seconds for testing.
+
 Private char priv_response_buf[MAX_RESPONSE_LENGTH + 1];
 Private char priv_gp_str[GENERAL_PURPOSE_STR_LENGTH + 1u];
 
@@ -85,6 +87,7 @@ Private char * priv_response_ptr;   //Points to the end of the current response.
 Private U16    priv_remaining_buf_len;  //Keeps track of the number of bytes remaining in the response buffer.
 
 Private uartCmdState_T priv_state;
+Private int priv_cmd_timeout = 0;
 
 /********************************** Public function definitions  **************************************/
 
@@ -98,9 +101,39 @@ Public void uartCommandHandler_init(void)
 
 Public void uartCommandHandler_cyclic50ms(void)
 {
-    /* TODO : Handle command timeouts here. */
+    if (priv_state == UART_CMD_RESPONSE_PENDING)
+    {
+        priv_cmd_timeout -= 50;
+        if (priv_cmd_timeout <= 0)
+        {
+            uartmgr_send_str_async("TIMEOUT", 8u);
+            priv_state = UART_CMD_IDLE;
+        }
+    }
 }
 
+
+Public void uartCommandHandler_setSpeedResponse(void)
+{
+    U8 ix;
+    U16 speed;
+
+    if (priv_state == UART_CMD_RESPONSE_PENDING)
+    {
+        priv_state = UART_CMD_IDLE;
+        priv_cmd_timeout = 0;
+
+        for (ix = 0u; ix < NUMBER_OF_STEPPERS; ix++)
+        {
+            speed = stepper_getSpeed((Stepper_Id)ix);
+            sprintf(priv_gp_str, "M%d:%dRPM ", ix, speed);
+            appendResponse(priv_gp_str);
+        }
+
+        /* Transmit response over UART. */
+        uartmgr_send_str_async(priv_response_buf, strlen(priv_response_buf));
+    }
+}
 
 /*********************************  Private function definitions  *******************/
 
@@ -158,6 +191,13 @@ Private Boolean handleCommand(char * cmd, U16 msg_len)
     }
 
     return res;
+}
+
+
+Private void setResponsePending(void)
+{
+    priv_state = UART_CMD_RESPONSE_PENDING;
+    priv_cmd_timeout = RESPONSE_TIMEOUT;
 }
 
 
@@ -262,7 +302,7 @@ Private Boolean HandleCommandRPMSet(Stepper_Id id, int arg)
     if ((id < NUMBER_OF_STEPPERS) && (arg >= 0))
     {
         stepper_setSpeed(arg, id);
-        priv_state = UART_CMD_RESPONSE_PENDING;
+        setResponsePending();
         res = TRUE;
     }
     return res;
@@ -276,7 +316,7 @@ Private Boolean HandleCommandMicroStepSet(Stepper_Id id, int arg)
     if ((id < NUMBER_OF_STEPPERS) && (arg >= 0))
     {
         res = stepper_setMicrosteppingMode(id, (U8)arg);
-        priv_state = UART_CMD_RESPONSE_PENDING;
+        setResponsePending();
     }
     return res;
 }

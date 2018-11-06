@@ -13,4 +13,6 @@
 extern void uartCommandHandler_init(void);
 extern void uartCommandHandler_cyclic50ms(void);
 
+extern void uartCommandHandler_setSpeedResponse(void);
+
 #endif /* LOGIC_COMMANDHANDLER_H_ */

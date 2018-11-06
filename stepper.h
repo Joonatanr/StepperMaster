@@ -34,5 +34,6 @@ extern Boolean stepper_getState(Stepper_Id id, Stepper_Query_t * res);
 
 
 extern Boolean stepper_handleStatusResponse(U8 * data, U8 data_len);
+extern Boolean stepper_handleSpeedSetResponse(U8 * data, U8 data_len);
 
 #endif /* HW_STEPPER_H_ */

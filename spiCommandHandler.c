@@ -316,7 +316,7 @@ Private Boolean handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 da
                 res = stepper_handleStatusResponse(data, data_len);
                 break;
             case CMD_SET_MOTOR_SPEED:
-                /* TODO */
+                res = stepper_handleSpeedSetResponse(data, data_len);
                 break;
             case CMD_NO_COMMAND:
             default:
