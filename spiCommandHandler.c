@@ -84,7 +84,9 @@ Private const U16 priv_crcTable_16[256] = {
 };
 
 Private SpiCommandData priv_command;
+
 Private U8 priv_previous_cmd;
+Private U8 priv_expected_response_cmd_id;
 
 Private SpiCommand_State priv_state = SPI_COMMAND_IDLE;
 Private U8 * priv_response_ptr = NULL;
@@ -202,6 +204,7 @@ Public void spiCommandHandler_prepareCommand(U8 * dest)
     dest[packet_len - 2] = (crc >> 8u) & 0xffu;
     dest[packet_len - 1] = crc & 0xffu;
 
+    priv_expected_response_cmd_id = priv_previous_cmd;
     priv_previous_cmd = priv_command.cmd_id;
 
     /* Set up the next command to DEFAULT. (This can be overridden) */
@@ -296,7 +299,7 @@ Private Boolean handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 da
 {
     Boolean res = TRUE;
 
-    if (cmd_id != priv_previous_cmd)
+    if (cmd_id != priv_expected_response_cmd_id)
     {
         //Something has gone wrong, we got a response to a command that we were not expecting...
         res = FALSE;
