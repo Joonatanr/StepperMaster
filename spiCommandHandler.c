@@ -6,6 +6,7 @@
  */
 
 #include "SpiCommandHandler.h"
+#include "stepper.h"
 #include "driverlib.h"
 #include "led.h"
 
@@ -312,16 +313,7 @@ Private Boolean handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 da
         switch(cmd_id)
         {
             case CMD_REPORT_STATUS:
-                /* TODO : Implement this. Currently we have placeholder. */
-                if (data[0] == 0xDE && data[1] == 0xAD && data[2] == 0xBE && data[3] == 0xEFu)
-                {
-                    res = TRUE;
-                }
-                else
-                {
-                    res = FALSE;
-                }
-                /* End of placeholder. */
+                res = stepper_handleStatusResponse(data, data_len);
                 break;
             case CMD_SET_MOTOR_SPEED:
                 /* TODO */

@@ -69,3 +69,30 @@ Public Boolean stepper_getState(Stepper_Id id, Stepper_Query_t * res)
     return TRUE;
 }
 
+
+Public Boolean stepper_handleStatusResponse(U8 * data, U8 data_len)
+{
+    U8 ix;
+    U8 * data_ptr = data;
+
+    if (data_len != (NUMBER_OF_STEPPERS * 5))
+    {
+        return FALSE;
+    }
+
+
+    for (ix = 0u; ix < NUMBER_OF_STEPPERS; ix++)
+    {
+        priv_stepper_states[ix].microstepping_mode = data_ptr[0];
+        priv_stepper_states[ix].interval = (U16)(data_ptr[1] << 8u);
+        priv_stepper_states[ix].interval |= (U16)(data_ptr[2] & 0xffu);
+
+        priv_stepper_states[ix].rpm =  (U16)(data_ptr[3] << 8u);
+        priv_stepper_states[ix].rpm |= (U16)(data_ptr[4] & 0xffu);
+
+        data_ptr += 5;
+    }
+
+    return TRUE;
+}
+
