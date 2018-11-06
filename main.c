@@ -5,14 +5,14 @@
 #include "spidrv.h"
 #include "uartmgr.h"
 #include "spiCommandHandler.h"
+#include "uartCommandHandler.h"
 #include "led.h"
+#include "stepper.h"
 
 /**
  * main.c
  */
 
-Boolean UartCommandCallback(char *buf, U16 msg_len);
-UartCommandHandler CmdHandlerFunc = UartCommandCallback; /* Connect callback to UART manager. */
 
 Boolean priv_isInitComplete = FALSE;
 
@@ -28,7 +28,11 @@ void main(void)
 
 	led_init();
 
+	stepper_init();
+
 	spiCommandHandler_init();
+
+	uartCommandHandler_init();
 
 	Interrupt_enableMaster();
 
@@ -65,15 +69,8 @@ void timer_10msec_callback(void)
         spi_timer = 0u;
         spidrv_cyclic50ms();
         led_cyclic50ms();
+        uartCommandHandler_cyclic50ms();
     }
 
     spiCommandHandler_cyclic10ms();
-}
-
-
-/* Placeholder. */
-Boolean UartCommandCallback(char *buf, U16 msg_len)
-{
-    /* We end up here when receiving a line over the UART. */
-    return TRUE;
 }
