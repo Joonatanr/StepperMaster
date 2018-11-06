@@ -262,6 +262,7 @@ Private Boolean HandleCommandRPMSet(Stepper_Id id, int arg)
     if ((id < NUMBER_OF_STEPPERS) && (arg >= 0))
     {
         stepper_setSpeed(arg, id);
+        priv_state = UART_CMD_RESPONSE_PENDING;
         res = TRUE;
     }
     return res;
@@ -275,6 +276,7 @@ Private Boolean HandleCommandMicroStepSet(Stepper_Id id, int arg)
     if ((id < NUMBER_OF_STEPPERS) && (arg >= 0))
     {
         res = stepper_setMicrosteppingMode(id, (U8)arg);
+        priv_state = UART_CMD_RESPONSE_PENDING;
     }
     return res;
 }

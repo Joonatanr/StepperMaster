@@ -83,13 +83,15 @@ Private const U16 priv_crcTable_16[256] = {
 };
 
 Private SpiCommandData priv_command;
+Private U8 priv_previous_cmd;
+
 Private SpiCommand_State priv_state = SPI_COMMAND_IDLE;
 Private U8 * priv_response_ptr = NULL;
 
 /**************************************** Private function forward declarations *************************************************/
 
 Private Boolean processResponse(void);
-Private void handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 data_len);
+Private Boolean handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 data_len);
 Private U16 calculate_crc16( U16 crc, const U8* data, U32 len);
 Private Boolean setCommand(U8 cmd_id, U8 sub, U8 * data, U8 data_len);
 
@@ -199,6 +201,8 @@ Public void spiCommandHandler_prepareCommand(U8 * dest)
     dest[packet_len - 2] = (crc >> 8u) & 0xffu;
     dest[packet_len - 1] = crc & 0xffu;
 
+    priv_previous_cmd = priv_command.cmd_id;
+
     /* Set up the next command to DEFAULT. (This can be overridden) */
     setCommand((U8)CMD_REPORT_STATUS, 0x00u, NULL, 0u);
     priv_state = SPI_RESPONSE_PENDING; /* We are now waiting for a response. */
@@ -267,10 +271,9 @@ Private Boolean processResponse(void)
                 data_ptr++;
 
                 /* Response is in correct format... */
-                res = TRUE;
 
                 /* Pass response on to handler... */
-                handleResponse(cmd_id, sub_id, resp_code, data_ptr, packet_len - CMD_METADATA_LEN);
+                res = handleResponse(cmd_id, sub_id, resp_code, data_ptr, packet_len - CMD_METADATA_LEN);
             }
             else
             {
@@ -288,9 +291,53 @@ Private Boolean processResponse(void)
 }
 
 
-Private void handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 data_len)
+Private Boolean handleResponse(U8 cmd_id, U8 sub, U8 resp_code, U8 * data, U8 data_len)
 {
-    /* TODO : Implement this. */
+    Boolean res = TRUE;
+
+    if (cmd_id != priv_previous_cmd)
+    {
+        //Something has gone wrong, we got a response to a command that we were not expecting...
+        res = FALSE;
+    }
+
+    if (resp_code != SPI_RESPONSE_ACK)
+    {
+        //Got negative response.
+        res = FALSE;
+    }
+
+    if (res == TRUE)
+    {
+        switch(cmd_id)
+        {
+            case CMD_REPORT_STATUS:
+                /* TODO : Implement this. Currently we have placeholder. */
+                if (data[0] == 0xDE && data[1] == 0xAD && data[2] == 0xBE && data[3] == 0xEFu)
+                {
+                    res = TRUE;
+                }
+                else
+                {
+                    res = FALSE;
+                }
+                /* End of placeholder. */
+                break;
+            case CMD_SET_MOTOR_SPEED:
+                /* TODO */
+                break;
+            case CMD_NO_COMMAND:
+            default:
+                /* Do nothing here... Probably will never end up here in any case. */
+                break;
+        }
+    }
+    else
+    {
+        /* TODO : Handle negative response. */
+    }
+
+    return res;
 }
 
 
